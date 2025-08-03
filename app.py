@@ -2,9 +2,43 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+import gdown
+import os
 
-# Load the trained model
-model = tf.keras.models.load_model('tomato_leaf_classifier.h5')
+# Define the Google Drive File ID of your trained model
+# IMPORTANT: Replace 'YOUR_GOOGLE_DRIVE_FILE_ID' with the actual File ID
+# Make sure the file is shared publicly ("Anyone with the link")
+model_file_id = '1OS4BIFwaQZeT5KZuBi4mc_kVdMmDN_yf'
+model_filename = 'tomato_leaf_classifier.h5'
+model_path = model_filename # Define the local path where the model will be saved
+
+# Download the model file from Google Drive
+@st.cache_resource # Cache the model loading
+def load_model():
+    if not os.path.exists(model_path):
+        st.info(f"Downloading model file: {model_filename}")
+        try:
+            gdown.download(f'https://drive.google.com/uc?id={model_file_id}', model_path, quiet=True)
+            st.success("Model downloaded successfully.")
+        except Exception as e:
+            st.error(f"Error downloading model: {e}")
+            return None
+    else:
+        st.info("Model file already exists.")
+
+    st.info("Loading model...")
+    try:
+        model = tf.keras.models.load_model(model_path)
+        st.success("Model loaded successfully.")
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
+
+model = load_model()
+
+if model is None:
+    st.stop() # Stop the app if the model could not be loaded
 
 # Define the image size
 img_height, img_width = 128, 128
@@ -15,7 +49,7 @@ class_names = ['Tomato_Bacterial_spot', 'Tomato_Early_blight', 'Tomato_healthy']
 
 st.title("Tomato Leaf Disease Classifier")
 
-uploaded_file = st.file_uploader("Choose a tomato leaf image...", type="jpg")
+uploaded_file = st.file_uploader("Choose a tomato leaf image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     # Display the uploaded image
@@ -36,5 +70,5 @@ if uploaded_file is not None:
     confidence = 100 * np.max(score)
 
     # Display the prediction
-    st.write(f"Prediction: {predicted_class_name}")
-    st.write(f"Confidence: {confidence:.2f}%")
+    st.write(f"Prediction: **{predicted_class_name}**")
+    st.write(f"Confidence: **{confidence:.2f}%**")
